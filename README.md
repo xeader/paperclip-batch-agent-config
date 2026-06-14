@@ -10,7 +10,7 @@ Batch Agent Config for **PaperClip** is a lightweight yet powerful plugin that l
 
 <video src="https://github.com/xeader/paperclip-batch-agent-config/blob/main/docs/screenshots/demo.mp4?raw=true" width="1080" height="600"></video>
 
-![Demo](https://github.com/xeader/paperclip-batch-agent-config/blob/main/docs/screenshots/demo.png?raw=true)
+![Demo](https://github.com/xeader/paperclip-batch-agent-config/blob/main/docs/screenshots/demo.mp4?raw=true)
 
 ## 🚀 Highlights
 
