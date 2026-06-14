@@ -1,37 +1,37 @@
 {
-  "name": "paperclip-batch-agent-config",
-  "version": "0.1.0",
-  "description": "Edit adapter and permissions configuration for multiple agents at once on PaperClip AI",
-  "url": "https://github.com/xeader/paperclip-batch-agent-config",
-  "author": {
-    "name": "Xeader",
-    "url": "https://www.xeader.com",
-    "email": "info@xeader.com"
-  },
-  "type": "module",
-  "scripts": {
-    "dev": "node scripts/dev.mjs",
-    "build": "node scripts/build.mjs",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run"
-  },
-  "paperclipPlugin": {
-    "manifestPath": "dist/manifest.js",
-    "workerPath": "dist/worker.js",
-    "uiPath": "dist/ui/index.js"
-  },
-  "devDependencies": {
-    "@paperclipai/plugin-sdk": "latest",
-    "@types/node": "^25.9.3",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "esbuild": "^0.20.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "typescript": "^5.4.0",
-    "vitest": "^1.0.0"
-  },
-  "dependencies": {
-    "lucide-react": "^1.18.0"
-  }
+    "name": "paperclip-batch-agent-config",
+    "version": "0.1.1",
+    "description": "Edit adapter and permissions configuration for multiple agents at once on PaperClip AI",
+    "url": "https://github.com/xeader/paperclip-batch-agent-config",
+    "author": {
+        "name": "Xeader",
+        "url": "https://www.xeader.com",
+        "email": "info@xeader.com"
+    },
+    "type": "module",
+    "scripts": {
+        "dev": "node scripts/dev.mjs",
+        "build": "node scripts/build.mjs",
+        "typecheck": "tsc --noEmit",
+        "test": "vitest run"
+    },
+    "paperclipPlugin": {
+        "manifestPath": "dist/manifest.js",
+        "workerPath": "dist/worker.js",
+        "uiPath": "dist/ui/index.js"
+    },
+    "devDependencies": {
+        "@paperclipai/plugin-sdk": "latest",
+        "@types/node": "^25.9.3",
+        "@types/react": "^18.2.0",
+        "@types/react-dom": "^18.2.0",
+        "esbuild": "^0.20.0",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "typescript": "^5.4.0",
+        "vitest": "^1.0.0"
+    },
+    "dependencies": {
+        "lucide-react": "^1.18.0"
+    }
 }
