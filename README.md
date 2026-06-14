@@ -8,6 +8,10 @@
 
 Batch Agent Config for **PaperClip** is a lightweight yet powerful plugin that lets you update adapters and permissions across many agents with a single action. Whether you need to tune API keys, reorder your org chart or fine‑tune who can create new agents, this plugin brings a bulk‑editing experience directly into your PaperClip workspace.
 
+<video src="https://github.com/xeader/paperclip-batch-agent-config/blob/main/docs/screenshots/demo.mp4?raw=true" width="1080" height="600"></video>
+
+![Demo](https://github.com/xeader/paperclip-batch-agent-config/blob/main/docs/screenshots/demo.png?raw=true)
+
 ## 🚀 Highlights
 
 - **Mass‑edit multiple agents at once** — select a handful or your entire team and apply configuration changes in one go.
@@ -102,19 +106,13 @@ The plugin has been designed to feel like a traditional list view. The following
 - `Shift + Click` — select a range between two agents.
 - `Ctrl/⌘ + Click` — select/deselect an agent and its descendants.
 
-## 🎥 Demo & Screenshots
-
-### Select agents, drag to reorder and apply changes
-
-![[demo.mp4]]
-
 ### Agent list in hierarchy mode with multi‑selection
 
-![[agent-list.png]]
+![Demo](https://github.com/xeader/paperclip-batch-agent-config/blob/main/docs/screenshots/agent-list.png?raw=true)
 
 ### Configuration form 
 
-![[config-panel.png]]
+![Demo](https://github.com/xeader/paperclip-batch-agent-config/blob/main/docs/screenshots/config-panel.png?raw=true)
 
 ### Development
 
