@@ -1,22 +1,38 @@
 import { useState, useCallback } from "react";
 import { usePluginData } from "@paperclipai/plugin-sdk/ui";
+import { Save, Pencil, Trash2, RotateCcw, Check } from "lucide-react";
 import type { BatchConfigDelta } from "./types";
+
+interface FormState {
+  adapterType: string;
+  model: string;
+  cheapModelEnabled: "" | "true" | "false";
+  cheapModel: string;
+  command: string;
+  thinkingEffort: string;
+  chromeOption: "" | "enable" | "true" | "false";
+  extraArgs: string;
+  skipPermissions: "" | "true" | "false";
+  canCreateAgents: "" | "true" | "false";
+  canAssignTasks: "" | "true" | "false";
+}
+
+interface FormPreset {
+  name: string;
+  state: FormState;
+}
 
 interface ConfigFormProps {
   onApply: (config: BatchConfigDelta) => Promise<void>;
   applying: boolean;
   selectedCount: number;
   results: Array<{ agentId: string; success: boolean; error?: string; agentName?: string }> | null;
+  companyId: string;
 }
 
 const ADAPTER_TYPES = [
-  "acpx_local",
-  "claude_local",
-  "codex_local",
-  "cursor",
-  "gemini_local",
-  "opencode_local",
-  "pi_local",
+  "acpx_local", "claude_local", "codex_local",
+  "cursor", "gemini_local", "opencode_local", "pi_local",
 ];
 
 type TernaryBool = "" | "true" | "false";
@@ -38,7 +54,7 @@ function OverridableText({
   placeholder: string;
   showReset: boolean;
 }) {
-  const [overridden, setOverridden] = useState(value !== "");
+  const [overridden, setOverridden] = useState(() => value !== "");
 
   if (!overridden) {
     return (
@@ -88,7 +104,30 @@ function OverridableText({
   );
 }
 
-export function ConfigForm({ onApply, applying, selectedCount, results }: ConfigFormProps) {
+function localStorageKey(companyId: string) {
+  return `batch-presets-${companyId}`;
+}
+
+function loadPresets(companyId: string): FormPreset[] {
+  try {
+    const raw = localStorage.getItem(localStorageKey(companyId));
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function savePresets(companyId: string, presets: FormPreset[]) {
+  localStorage.setItem(localStorageKey(companyId), JSON.stringify(presets));
+}
+
+const EMPTY_FORM: FormState = {
+  adapterType: "", model: "", cheapModelEnabled: "", cheapModel: "",
+  command: "", thinkingEffort: "", chromeOption: "", extraArgs: "",
+  skipPermissions: "", canCreateAgents: "", canAssignTasks: "",
+};
+
+export function ConfigForm({ onApply, applying, selectedCount, results, companyId }: ConfigFormProps) {
   const [adapterType, setAdapterType] = useState("");
   const [model, setModel] = useState("");
   const [cheapModel, setCheapModel] = useState("");
@@ -100,10 +139,81 @@ export function ConfigForm({ onApply, applying, selectedCount, results }: Config
   const [skipPermissions, setSkipPermissions] = useState<TernaryBool>("");
   const [canCreateAgents, setCanCreateAgents] = useState<TernaryBool>("");
   const [canAssignTasks, setCanAssignTasks] = useState<TernaryBool>("");
+  const [loadKey, setLoadKey] = useState(0);
+  const [presets, setPresets] = useState<FormPreset[]>(() => loadPresets(companyId));
+  const [selectedPreset, setSelectedPreset] = useState<string>("");
+  const [activePresetName, setActivePresetName] = useState<string | null>(null);
 
   const modelData = usePluginData("getAdapterModels", { adapterType: adapterType || "opencode_local" });
   const modelResult = modelData.data as { models: string[] } | undefined;
   const models: string[] = modelResult?.models ?? [];
+
+  function getFormState(): FormState {
+    return {
+      adapterType, model, cheapModelEnabled, cheapModel, command,
+      thinkingEffort, chromeOption: chromeOption as TernaryBool | "enable",
+      extraArgs, skipPermissions, canCreateAgents, canAssignTasks,
+    };
+  }
+
+  function setFormState(s: FormState) {
+    setAdapterType(s.adapterType);
+    setModel(s.model);
+    setCheapModelEnabled(s.cheapModelEnabled);
+    setCheapModel(s.cheapModel);
+    setCommand(s.command);
+    setThinkingEffort(s.thinkingEffort);
+    setChromeOption(s.chromeOption);
+    setExtraArgs(s.extraArgs);
+    setSkipPermissions(s.skipPermissions);
+    setCanCreateAgents(s.canCreateAgents);
+    setCanAssignTasks(s.canAssignTasks);
+    setLoadKey((k) => k + 1);
+  }
+
+  function handleSavePreset() {
+    const suggested = activePresetName || "";
+    const name = window.prompt("Preset name:", suggested);
+    if (!name || !name.trim()) return;
+    const trimmed = name.trim();
+    const existing = presets.find((p) => p.name === trimmed);
+    if (existing && !window.confirm(`Preset "${trimmed}" already exists. Overwrite?`)) return;
+    const newPresets = existing
+      ? presets.map((p) => (p.name === trimmed ? { name: trimmed, state: getFormState() } : p))
+      : [...presets, { name: trimmed, state: getFormState() }];
+    setPresets(newPresets);
+    savePresets(companyId, newPresets);
+    setActivePresetName(trimmed);
+    setSelectedPreset(trimmed);
+  }
+
+  function handleRenamePreset() {
+    if (!selectedPreset) return;
+    const newName = window.prompt("New name:", selectedPreset);
+    if (!newName || !newName.trim() || newName.trim() === selectedPreset) return;
+    const trimmed = newName.trim();
+    if (presets.find((p) => p.name === trimmed)) {
+      alert(`Preset "${trimmed}" already exists.`);
+      return;
+    }
+    const newPresets = presets.map((p) =>
+      p.name === selectedPreset ? { ...p, name: trimmed } : p
+    );
+    setPresets(newPresets);
+    savePresets(companyId, newPresets);
+    setSelectedPreset(trimmed);
+    if (activePresetName === selectedPreset) setActivePresetName(trimmed);
+  }
+
+  function handleDeletePreset() {
+    if (!selectedPreset) return;
+    if (!window.confirm(`Delete preset "${selectedPreset}"?`)) return;
+    const newPresets = presets.filter((p) => p.name !== selectedPreset);
+    setPresets(newPresets);
+    savePresets(companyId, newPresets);
+    setSelectedPreset("");
+    if (activePresetName === selectedPreset) setActivePresetName(null);
+  }
 
   const handleApply = useCallback(() => {
     const adapterConfig: Record<string, unknown> = {};
@@ -120,11 +230,14 @@ export function ConfigForm({ onApply, applying, selectedCount, results }: Config
     if (adapterType) config.adapterType = adapterType;
     if (Object.keys(adapterConfig).length > 0) config.adapterConfig = adapterConfig;
     if (cheapModelEnabled !== "" || cheapModel) {
-      const cheap = {
-        enabled: cheapModelEnabled !== "false",
-        adapterConfig: cheapModel ? { model: cheapModel } : {},
+      config.runtimeConfig = {
+        modelProfiles: {
+          cheap: {
+            enabled: cheapModelEnabled !== "false",
+            adapterConfig: cheapModel ? { model: cheapModel } : {},
+          },
+        },
       };
-      config.runtimeConfig = { modelProfiles: { cheap } };
     }
 
     if (canCreateAgents !== "" || canAssignTasks !== "") {
@@ -171,17 +284,70 @@ export function ConfigForm({ onApply, applying, selectedCount, results }: Config
     );
   }
 
+  function iconBtn(icon: React.ReactNode, label: string, onClick: () => void, disabled = false) {
+    return (
+      <button
+        type="button"
+        title={label}
+        onClick={onClick}
+        disabled={disabled}
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 4,
+          padding: "4px 8px", fontSize: 12, borderRadius: 4,
+          border: "1px solid #444", background: "transparent",
+          color: disabled ? "#555" : "#a1a1aa",
+          cursor: disabled ? "not-allowed" : "pointer",
+        }}
+      >
+        {icon}
+        <span>{label}</span>
+      </button>
+    );
+  }
+
   const successCount = results?.filter((r) => r.success).length ?? 0;
   const failCount = results?.filter((r) => !r.success).length ?? 0;
 
   return (
-    <div style={{ padding: 24, maxWidth: 640 }}>
+    <div style={{ padding: 24 }}>
       <h1 style={{ fontSize: 18, fontWeight: 600, color: "#f4f4f5", marginBottom: 4 }}>
         Batch Agent Configuration
       </h1>
-      <p style={{ fontSize: 12, color: "#71717a", marginBottom: 24 }}>
+      <p style={{ fontSize: 12, color: "#71717a", marginBottom: 12 }}>
         Select agents on the left, then configure settings below and apply them in bulk.
       </p>
+
+      <div style={{
+        display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
+        padding: "8px 12px", marginBottom: 16,
+        background: "#27272a", borderRadius: 8,
+      }}>
+        <select
+          value={selectedPreset}
+          onChange={(e) => {
+            const name = e.target.value;
+            setSelectedPreset(name);
+            if (!name) { setFormState(EMPTY_FORM); setActivePresetName(null); return; }
+            const preset = presets.find((p) => p.name === name);
+            if (preset) setFormState(preset.state);
+            setActivePresetName(name);
+          }}
+          style={{
+            flex: 1, minWidth: 0, padding: "4px 8px", fontSize: 12, borderRadius: 4,
+            border: "1px solid #444", background: "#18181b", color: "#e4e4e7",
+            outline: "none",
+          }}
+        >
+          <option value="">Select a preset…</option>
+          {presets.map((p) => (
+            <option key={p.name} value={p.name}>{p.name}</option>
+          ))}
+        </select>
+
+        {iconBtn(<Pencil size={14} />, "Rename", handleRenamePreset, !selectedPreset)}
+        {iconBtn(<Trash2 size={14} />, "Delete", handleDeletePreset, !selectedPreset)}
+        {iconBtn(<Save size={14} />, "Save as Preset…", handleSavePreset)}
+      </div>
 
       {sectionTitle("Adapter")}
 
@@ -199,7 +365,7 @@ export function ConfigForm({ onApply, applying, selectedCount, results }: Config
 
       {fieldRow("Model", (
         <div style={{ display: "flex", gap: 8, flexDirection: "column" }}>
-          <OverridableText value={model} onChange={setModel} placeholder="e.g. claude-sonnet-4-20250514" showReset={true} />
+          <OverridableText key={loadKey} value={model} onChange={setModel} placeholder="e.g. claude-sonnet-4-20250514" showReset={true} />
           {model && models.length > 0 && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
               {models.slice(0, 10).map((m) => (
@@ -232,7 +398,7 @@ export function ConfigForm({ onApply, applying, selectedCount, results }: Config
             <option value="false">Disable</option>
           </select>
           {cheapModelEnabled === "true" && (
-            <OverridableText value={cheapModel} onChange={setCheapModel} placeholder="e.g. claude-hdk-20250101" showReset={true} />
+            <OverridableText key={loadKey} value={cheapModel} onChange={setCheapModel} placeholder="e.g. claude-hdk-20250101" showReset={true} />
           )}
           <span style={{ fontSize: 11, color: "#71717a", fontStyle: "italic" }}>
             Used when a run requests the cheap profile (e.g. routine summaries). The primary model stays unchanged.
@@ -242,7 +408,7 @@ export function ConfigForm({ onApply, applying, selectedCount, results }: Config
 
       {fieldRow("Command", (
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <OverridableText value={command} onChange={setCommand} placeholder="e.g. npx opencode" showReset={true} />
+          <OverridableText key={loadKey} value={command} onChange={setCommand} placeholder="e.g. npx opencode" showReset={true} />
           <span style={{ fontSize: 11, color: "#71717a", fontStyle: "italic" }}>
             The command to execute (e.g. npx opencode, claude, codex).
           </span>
@@ -253,9 +419,13 @@ export function ConfigForm({ onApply, applying, selectedCount, results }: Config
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <select value={thinkingEffort} onChange={(e) => setThinkingEffort(e.target.value)} style={selectStyle}>
             <option value="">Keep current</option>
+            <option value="auto">Auto</option>
             <option value="low">Low</option>
             <option value="medium">Medium</option>
             <option value="high">High</option>
+            <option value="xhigh">Extra High</option>
+            <option value="max">Max</option>
+            <option value="minimal">Minimal</option>
           </select>
           <span style={{ fontSize: 11, color: "#71717a", fontStyle: "italic" }}>
             Control model reasoning depth. Supported values vary by adapter/model.
@@ -278,7 +448,7 @@ export function ConfigForm({ onApply, applying, selectedCount, results }: Config
 
       {fieldRow("Extra Args", (
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <OverridableText value={extraArgs} onChange={setExtraArgs} placeholder="--flag1, --flag2, --foo=bar" showReset={true} />
+          <OverridableText key={loadKey} value={extraArgs} onChange={setExtraArgs} placeholder="--flag1, --flag2, --foo=bar" showReset={true} />
           <span style={{ fontSize: 11, color: "#71717a", fontStyle: "italic" }}>
             Additional CLI arguments passed to the adapter. Comma-separated.
           </span>
@@ -317,18 +487,32 @@ export function ConfigForm({ onApply, applying, selectedCount, results }: Config
         </div>
       ))}
 
-      <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid #333" }}>
+      <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid #333", display: "flex", gap: 8 }}>
         <button
           type="button"
           onClick={handleApply}
           disabled={!canApply}
           style={{
             ...applyBtnStyle,
+            display: "inline-flex", alignItems: "center", gap: 6,
             opacity: canApply ? 1 : 0.5,
             cursor: canApply ? "pointer" : "not-allowed",
           }}
         >
+          <Check size={16} />
           {applying ? "Applying..." : `Apply to ${selectedCount} agent${selectedCount !== 1 ? "s" : ""}`}
+        </button>
+        <button
+          type="button"
+          onClick={() => setFormState(EMPTY_FORM)}
+          style={{
+            ...applyBtnStyle,
+            display: "inline-flex", alignItems: "center", gap: 6,
+            background: "#27272a", color: "#a1a1aa",
+          }}
+        >
+          <RotateCcw size={16} />
+          Reset
         </button>
       </div>
 
@@ -358,49 +542,24 @@ export function ConfigForm({ onApply, applying, selectedCount, results }: Config
 }
 
 const inputStyle: React.CSSProperties = {
-  flex: 1,
-  padding: "6px 10px",
-  fontSize: 13,
-  borderRadius: 6,
-  border: "1px solid #444",
-  background: "#18181b",
-  color: "#e4e4e7",
-  outline: "none",
+  flex: 1, padding: "6px 10px", fontSize: 13, borderRadius: 6,
+  border: "1px solid #444", background: "#18181b", color: "#e4e4e7", outline: "none",
 };
 
 const selectStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "6px 10px",
-  fontSize: 13,
-  borderRadius: 6,
-  border: "1px solid #444",
-  background: "#18181b",
-  color: "#e4e4e7",
-  outline: "none",
+  width: "100%", padding: "6px 10px", fontSize: 13, borderRadius: 6,
+  border: "1px solid #444", background: "#18181b", color: "#e4e4e7", outline: "none",
 };
 
 const chipStyle: React.CSSProperties = {
-  padding: "2px 8px",
-  fontSize: 11,
-  borderRadius: 4,
-  border: "none",
-  cursor: "pointer",
+  padding: "2px 8px", fontSize: 11, borderRadius: 4, border: "none", cursor: "pointer",
 };
 
 const applyBtnStyle: React.CSSProperties = {
-  padding: "8px 24px",
-  fontSize: 14,
-  fontWeight: 600,
-  borderRadius: 8,
-  border: "none",
-  background: "#3b82f6",
-  color: "#fff",
+  padding: "8px 24px", fontSize: 14, fontWeight: 600, borderRadius: 8,
+  border: "none", background: "#3b82f6", color: "#fff",
 };
 
 const toggleBtnStyle: React.CSSProperties = {
-  padding: "4px 10px",
-  fontSize: 12,
-  borderRadius: 4,
-  border: "none",
-  cursor: "pointer",
+  padding: "4px 10px", fontSize: 12, borderRadius: 4, border: "none", cursor: "pointer",
 };

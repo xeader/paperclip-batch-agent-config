@@ -54,8 +54,8 @@ export function BatchAgentConfigPage(_props: PluginPageProps) {
   }
 
   return (
-    <div style={{ display: "flex", height: "100%", gap: 0 }}>
-      <div style={{ width: 380, minWidth: 380, borderRight: "1px solid #333", overflow: "auto" }}>
+    <div style={{ display: "flex", height: "calc(100vh - 160px)", gap: 0 }}>
+      <div style={{ width: 380, minWidth: 380, borderRight: "1px solid #333", overflowY: "auto" }}>
         <AgentSelector
           agents={agents}
           selectedIds={selectedIds}
@@ -63,8 +63,9 @@ export function BatchAgentConfigPage(_props: PluginPageProps) {
           companyId={companyId}
         />
       </div>
-      <div style={{ flex: 1, overflow: "auto" }}>
+      <div style={{ flex: 1, overflowY: "auto" }}>
         <ConfigForm
+          companyId={companyId}
           onApply={handleApply}
           applying={applying}
           selectedCount={selectedIds.size}

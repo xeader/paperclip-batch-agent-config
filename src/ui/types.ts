@@ -7,6 +7,7 @@ export interface AgentInfo {
   icon: string | null;
   status: string;
   adapterType: string;
+  reportsTo: string | null;
 }
 
 export interface AgentConfiguration {
