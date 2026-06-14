@@ -1,7 +1,8 @@
 {
-  "name": "batch-agent-config",
+  "name": "paperclip-batch-agent-config",
   "version": "0.1.0",
-  "description": "Edit adapter and permissions configuration for multiple agents at once",
+  "description": "Edit adapter and permissions configuration for multiple agents at once on PaperClip AI",
+  "url": "https://github.com/xeader/paperclip-batch-agent-config",
   "author": {
     "name": "Xeader",
     "url": "https://www.xeader.com",

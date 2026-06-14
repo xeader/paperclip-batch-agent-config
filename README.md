@@ -34,7 +34,7 @@ Batch Agent Config for **PaperClip** is a lightweight yet powerful plugin that l
 1. **Clone the repository** into your PaperClip plugins directory and install dependencies:
 
     ```bash
-    git clone https://github.com/xeader/batch-agent-config.git
+    git clone https://github.com/xeader/paperclip-batch-agent-config.git
     cd batch-agent-config
     npm install
     ```
