@@ -19,22 +19,87 @@ const ADAPTER_TYPES = [
   "pi_local",
 ];
 
-const THINKING_EFFORT_OPTIONS = [
-  { value: "", label: "Default" },
-  { value: "low", label: "Low" },
-  { value: "medium", label: "Medium" },
-  { value: "high", label: "High" },
+type TernaryBool = "" | "true" | "false";
+
+const CHROME_OPTIONS: { value: TernaryBool | "enable"; label: string }[] = [
+  { value: "", label: "Keep current" },
+  { value: "enable", label: "Enable" },
+  { value: "false", label: "Disable" },
 ];
+
+function OverridableText({
+  value,
+  onChange,
+  placeholder,
+  showReset,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  showReset: boolean;
+}) {
+  const [overridden, setOverridden] = useState(value !== "");
+
+  if (!overridden) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ fontSize: 13, color: "#71717a", fontStyle: "italic" }}>Keep current</span>
+        <button
+          type="button"
+          onClick={() => setOverridden(true)}
+          style={{
+            ...toggleBtnStyle,
+            background: "transparent",
+            color: "#a1a1aa",
+            border: "1px solid #444",
+            padding: "2px 10px",
+          }}
+        >
+          Edit
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        style={inputStyle}
+      />
+      {showReset && (
+        <button
+          type="button"
+          onClick={() => { onChange(""); setOverridden(false); }}
+          style={{
+            ...toggleBtnStyle,
+            color: "#ef4444",
+            fontSize: 11,
+            whiteSpace: "nowrap",
+          }}
+        >
+          Reset
+        </button>
+      )}
+    </div>
+  );
+}
 
 export function ConfigForm({ onApply, applying, selectedCount, results }: ConfigFormProps) {
   const [adapterType, setAdapterType] = useState("");
   const [model, setModel] = useState("");
   const [cheapModel, setCheapModel] = useState("");
+  const [cheapModelEnabled, setCheapModelEnabled] = useState<TernaryBool>("");
   const [command, setCommand] = useState("");
   const [thinkingEffort, setThinkingEffort] = useState("");
-  const [enableChrome, setEnableChrome] = useState(false);
+  const [chromeOption, setChromeOption] = useState<TernaryBool | "enable">("");
   const [extraArgs, setExtraArgs] = useState("");
-  const [skipPermissions, setSkipPermissions] = useState(false);
+  const [skipPermissions, setSkipPermissions] = useState<TernaryBool>("");
+  const [canCreateAgents, setCanCreateAgents] = useState<TernaryBool>("");
+  const [canAssignTasks, setCanAssignTasks] = useState<TernaryBool>("");
 
   const modelData = usePluginData("getAdapterModels", { adapterType: adapterType || "opencode_local" });
   const modelResult = modelData.data as { models: string[] } | undefined;
@@ -42,37 +107,35 @@ export function ConfigForm({ onApply, applying, selectedCount, results }: Config
 
   const handleApply = useCallback(() => {
     const adapterConfig: Record<string, unknown> = {};
-
     if (model) adapterConfig.model = model;
     if (command) adapterConfig.command = command;
     if (thinkingEffort) adapterConfig.thinkingEffort = thinkingEffort;
-    if (enableChrome) adapterConfig.headless = false;
+    if (chromeOption === "enable") { adapterConfig.chrome = true; adapterConfig.headless = false; }
+    if (chromeOption === "false") { adapterConfig.chrome = false; adapterConfig.headless = true; }
     if (extraArgs.trim()) adapterConfig.extraArgs = extraArgs.split(" ").filter(Boolean);
+    if (skipPermissions === "true") { adapterConfig.dangerouslySkipPermissions = true; adapterConfig.skipPermissions = true; }
+    if (skipPermissions === "false") { adapterConfig.dangerouslySkipPermissions = false; adapterConfig.skipPermissions = false; }
 
     const config: BatchConfigDelta = {};
-
     if (adapterType) config.adapterType = adapterType;
     if (Object.keys(adapterConfig).length > 0) config.adapterConfig = adapterConfig;
-
-    if (cheapModel) {
-      config.runtimeConfig = {
-        modelProfiles: {
-          cheap: {
-            enabled: true,
-            adapterConfig: { model: cheapModel },
-          },
-        },
+    if (cheapModelEnabled !== "" || cheapModel) {
+      const cheap = {
+        enabled: cheapModelEnabled !== "false",
+        adapterConfig: cheapModel ? { model: cheapModel } : {},
       };
+      config.runtimeConfig = { modelProfiles: { cheap } };
     }
 
-    if (skipPermissions) {
+    if (canCreateAgents !== "" || canAssignTasks !== "") {
       config.permissions = {
-        canAssignTasks: true,
+        canCreateAgents: canCreateAgents === "true" ? true : canCreateAgents === "false" ? false : false,
+        canAssignTasks: canAssignTasks === "true" ? true : canAssignTasks === "false" ? false : false,
       };
     }
 
     onApply(config);
-  }, [adapterType, model, cheapModel, command, thinkingEffort, enableChrome, extraArgs, skipPermissions, onApply]);
+  }, [adapterType, model, cheapModel, cheapModelEnabled, command, thinkingEffort, chromeOption, extraArgs, skipPermissions, canCreateAgents, canAssignTasks, onApply]);
 
   const canApply = selectedCount > 0 && !applying;
 
@@ -90,15 +153,21 @@ export function ConfigForm({ onApply, applying, selectedCount, results }: Config
   function sectionTitle(title: string) {
     return (
       <h3 style={{
-        fontSize: 13,
-        fontWeight: 600,
-        color: "#e4e4e7",
-        paddingBottom: 8,
-        marginBottom: 16,
-        borderBottom: "1px solid #333",
+        fontSize: 13, fontWeight: 600, color: "#e4e4e7",
+        paddingBottom: 8, marginBottom: 16, borderBottom: "1px solid #333",
       }}>
         {title}
       </h3>
+    );
+  }
+
+  function ternarySelect(value: TernaryBool, onChange: (v: TernaryBool) => void, trueLabel: string, falseLabel: string) {
+    return (
+      <select value={value} onChange={(e) => onChange(e.target.value as TernaryBool)} style={selectStyle}>
+        <option value="">Keep current</option>
+        <option value="true">{trueLabel}</option>
+        <option value="false">{falseLabel}</option>
+      </select>
     );
   }
 
@@ -117,28 +186,21 @@ export function ConfigForm({ onApply, applying, selectedCount, results }: Config
       {sectionTitle("Adapter")}
 
       {fieldRow("Adapter Type", (
-        <select
-          value={adapterType}
-          onChange={(e) => setAdapterType(e.target.value)}
-          style={selectStyle}
-        >
-          <option value="">Keep current</option>
-          {ADAPTER_TYPES.map((t) => (
-            <option key={t} value={t}>{t}</option>
-          ))}
-        </select>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <select value={adapterType} onChange={(e) => setAdapterType(e.target.value)} style={selectStyle}>
+            <option value="">Keep current</option>
+            {ADAPTER_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <span style={{ fontSize: 11, color: "#71717a", fontStyle: "italic" }}>
+            How this agent runs: local CLI (Claude/Codex/OpenCode), spawned process, or generic HTTP webhook.
+          </span>
+        </div>
       ))}
 
       {fieldRow("Model", (
         <div style={{ display: "flex", gap: 8, flexDirection: "column" }}>
-          <input
-            type="text"
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            placeholder="e.g. claude-sonnet-4-20250514"
-            style={inputStyle}
-          />
-          {models.length > 0 && (
+          <OverridableText value={model} onChange={setModel} placeholder="e.g. claude-sonnet-4-20250514" showReset={true} />
+          {model && models.length > 0 && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
               {models.slice(0, 10).map((m) => (
                 <button
@@ -156,73 +218,103 @@ export function ConfigForm({ onApply, applying, selectedCount, results }: Config
               ))}
             </div>
           )}
+          <span style={{ fontSize: 11, color: "#71717a", fontStyle: "italic" }}>
+            Override the default model used by the adapter.
+          </span>
         </div>
       ))}
 
       {fieldRow("Cheap Model", (
-        <input
-          type="text"
-          value={cheapModel}
-          onChange={(e) => setCheapModel(e.target.value)}
-          placeholder="e.g. claude-hdk-20250101"
-          style={inputStyle}
-        />
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <select value={cheapModelEnabled} onChange={(e) => setCheapModelEnabled(e.target.value as TernaryBool)} style={selectStyle}>
+            <option value="">Keep current</option>
+            <option value="true">Enable</option>
+            <option value="false">Disable</option>
+          </select>
+          {cheapModelEnabled === "true" && (
+            <OverridableText value={cheapModel} onChange={setCheapModel} placeholder="e.g. claude-hdk-20250101" showReset={true} />
+          )}
+          <span style={{ fontSize: 11, color: "#71717a", fontStyle: "italic" }}>
+            Used when a run requests the cheap profile (e.g. routine summaries). The primary model stays unchanged.
+          </span>
+        </div>
       ))}
 
       {fieldRow("Command", (
-        <input
-          type="text"
-          value={command}
-          onChange={(e) => setCommand(e.target.value)}
-          placeholder="e.g. npx opencode"
-          style={inputStyle}
-        />
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <OverridableText value={command} onChange={setCommand} placeholder="e.g. npx opencode" showReset={true} />
+          <span style={{ fontSize: 11, color: "#71717a", fontStyle: "italic" }}>
+            The command to execute (e.g. npx opencode, claude, codex).
+          </span>
+        </div>
       ))}
 
       {fieldRow("Thinking Effort", (
-        <select
-          value={thinkingEffort}
-          onChange={(e) => setThinkingEffort(e.target.value)}
-          style={selectStyle}
-        >
-          {THINKING_EFFORT_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <select value={thinkingEffort} onChange={(e) => setThinkingEffort(e.target.value)} style={selectStyle}>
+            <option value="">Keep current</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+          <span style={{ fontSize: 11, color: "#71717a", fontStyle: "italic" }}>
+            Control model reasoning depth. Supported values vary by adapter/model.
+          </span>
+        </div>
       ))}
 
       {fieldRow("Enable Chrome", (
-        <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#d4d4d8" }}>
-          <input
-            type="checkbox"
-            checked={enableChrome}
-            onChange={(e) => setEnableChrome(e.target.checked)}
-          />
-          Enable headless browser
-        </label>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <select value={chromeOption} onChange={(e) => setChromeOption(e.target.value as TernaryBool | "enable")} style={selectStyle}>
+            {CHROME_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <span style={{ fontSize: 11, color: "#71717a", fontStyle: "italic" }}>
+            Enable Claude's Chrome integration by passing --chrome.
+          </span>
+        </div>
       ))}
 
       {fieldRow("Extra Args", (
-        <input
-          type="text"
-          value={extraArgs}
-          onChange={(e) => setExtraArgs(e.target.value)}
-          placeholder="--flag1 --flag2 value"
-          style={inputStyle}
-        />
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <OverridableText value={extraArgs} onChange={setExtraArgs} placeholder="--flag1, --flag2, --foo=bar" showReset={true} />
+          <span style={{ fontSize: 11, color: "#71717a", fontStyle: "italic" }}>
+            Additional CLI arguments passed to the adapter. Comma-separated.
+          </span>
+        </div>
       ))}
 
       {sectionTitle("Permissions & Configuration")}
 
       {fieldRow("Skip Permissions", (
-        <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#d4d4d8" }}>
-          <input
-            type="checkbox"
-            checked={skipPermissions}
-            onChange={(e) => setSkipPermissions(e.target.checked)}
-          />
-          Allow agent to create agents and assign tasks
-        </label>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <select value={skipPermissions} onChange={(e) => setSkipPermissions(e.target.value as TernaryBool)} style={selectStyle}>
+            <option value="">Keep current</option>
+            <option value="true">Enable</option>
+            <option value="false">Disable</option>
+          </select>
+          <span style={{ fontSize: 11, color: "#71717a", fontStyle: "italic" }}>
+            Run unattended by auto-approving adapter permission prompts when supported.
+          </span>
+        </div>
+      ))}
+
+      {fieldRow("Can create new agents", (
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          {ternarySelect(canCreateAgents, setCanCreateAgents, "Allow", "Deny")}
+          <span style={{ fontSize: 11, color: "#71717a", fontStyle: "italic" }}>
+            Lets this agent create or hire agents and implicitly assign tasks.
+          </span>
+        </div>
+      ))}
+      {fieldRow("Can assign tasks", (
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          {ternarySelect(canAssignTasks, setCanAssignTasks, "Allow", "Deny")}
+          <span style={{ fontSize: 11, color: "#71717a", fontStyle: "italic" }}>
+            When overridden by company-wide defaults, the effective permission may still show as enabled in the Paperclip UI.
+          </span>
+        </div>
       ))}
 
       <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid #333" }}>
@@ -236,9 +328,7 @@ export function ConfigForm({ onApply, applying, selectedCount, results }: Config
             cursor: canApply ? "pointer" : "not-allowed",
           }}
         >
-          {applying
-            ? "Applying..."
-            : `Apply to ${selectedCount} agent${selectedCount !== 1 ? "s" : ""}`}
+          {applying ? "Applying..." : `Apply to ${selectedCount} agent${selectedCount !== 1 ? "s" : ""}`}
         </button>
       </div>
 
@@ -252,10 +342,7 @@ export function ConfigForm({ onApply, applying, selectedCount, results }: Config
               <div
                 key={r.agentId}
                 style={{
-                  padding: "6px 12px",
-                  fontSize: 12,
-                  borderRadius: 6,
-                  marginBottom: 4,
+                  padding: "6px 12px", fontSize: 12, borderRadius: 6, marginBottom: 4,
                   background: r.success ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
                   color: r.success ? "#22c55e" : "#ef4444",
                 }}
@@ -271,7 +358,7 @@ export function ConfigForm({ onApply, applying, selectedCount, results }: Config
 }
 
 const inputStyle: React.CSSProperties = {
-  width: "100%",
+  flex: 1,
   padding: "6px 10px",
   fontSize: 13,
   borderRadius: 6,
@@ -308,4 +395,12 @@ const applyBtnStyle: React.CSSProperties = {
   border: "none",
   background: "#3b82f6",
   color: "#fff",
+};
+
+const toggleBtnStyle: React.CSSProperties = {
+  padding: "4px 10px",
+  fontSize: 12,
+  borderRadius: 4,
+  border: "none",
+  cursor: "pointer",
 };

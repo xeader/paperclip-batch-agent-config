@@ -2,7 +2,11 @@
   "name": "batch-agent-config",
   "version": "0.1.0",
   "description": "Edit adapter and permissions configuration for multiple agents at once",
-  "author": "antonio",
+  "author": {
+    "name": "Xeader",
+    "url": "https://www.xeader.com",
+    "email": "info@xeader.com"
+  },
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.mjs",

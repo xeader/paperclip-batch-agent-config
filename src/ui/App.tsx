@@ -29,7 +29,7 @@ export function BatchAgentConfigPage(_props: PluginPageProps) {
     setResults(null);
 
     try {
-      const result = await batchUpdate({ agentIds: Array.from(selectedIds), config }) as { results: Array<{ agentId: string; success: boolean; error?: string }> };
+      const result = await batchUpdate({ companyId, agentIds: Array.from(selectedIds), config }) as { results: Array<{ agentId: string; success: boolean; error?: string }> };
       const namedResults = result.results.map((r) => ({
         ...r,
         agentName: agents.find((a) => a.id === r.agentId)?.name ?? r.agentId,

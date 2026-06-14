@@ -16,7 +16,6 @@ export interface AgentConfiguration {
   runtimeConfig: Record<string, unknown>;
   permissions: {
     canCreateAgents: boolean;
-    canAssignTasks: boolean;
   };
   defaultEnvironmentId: string | null;
   budgetMonthlyCents: number;
@@ -27,8 +26,8 @@ export interface BatchConfigDelta {
   adapterConfig?: Record<string, unknown>;
   runtimeConfig?: Record<string, unknown>;
   permissions?: {
-    canCreateAgents?: boolean;
-    canAssignTasks?: boolean;
+    canCreateAgents: boolean;
+    canAssignTasks: boolean;
   };
   defaultEnvironmentId?: string | null;
 }

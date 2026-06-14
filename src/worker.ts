@@ -118,7 +118,8 @@ const plugin = definePlugin({
     ctx.actions.register(
       "batchUpdate",
       async (params: Record<string, unknown>) => {
-        const { agentIds, config } = params as {
+        const { companyId, agentIds, config } = params as {
+          companyId?: string;
           agentIds: string[];
           config: BatchConfigDelta;
         };
@@ -132,7 +133,10 @@ const plugin = definePlugin({
         for (const agentId of agentIds) {
           try {
             if (config.permissions) {
-              await apiFetch(`/agents/${agentId}/permissions`, {
+              const permUrl = companyId
+                ? `/agents/${agentId}/permissions?companyId=${companyId}`
+                : `/agents/${agentId}/permissions`;
+              await apiFetch(permUrl, {
                 method: "PATCH",
                 body: JSON.stringify(config.permissions),
               });

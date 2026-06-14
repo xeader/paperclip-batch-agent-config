@@ -7,7 +7,7 @@ const manifest: PaperclipPluginManifestV1 = {
   displayName: "Batch Agent Config",
   description:
     "Edit adapter and permissions configuration for multiple agents at once.",
-  author: "antonio",
+  author: "Xeader",
   categories: ["ui"],
   capabilities: [
     "ui.page.register",

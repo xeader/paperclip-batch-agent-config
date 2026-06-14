@@ -1,5 +1,5 @@
 import type { AgentInfo } from "./types";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, Bot } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 
 type SortField = "name" | "role" | "status" | "adapterType";
@@ -33,9 +33,9 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const SORT_FIELD_LABELS: Record<SortField, string> = {
-  name: "Nome",
-  role: "Ruolo",
-  status: "Stato",
+  name: "Name",
+  role: "Role",
+  status: "Status",
   adapterType: "Adapter",
 };
 
@@ -62,13 +62,12 @@ function AgentIcon({ iconName }: { iconName: string | null | undefined }) {
   const [Icon, setIcon] = useState<React.ComponentType<{ className?: string }> | null>(null);
 
   useEffect(() => {
-    if (!iconName) return;
+    if (!iconName) { setIcon(null); return; }
     loadIcon(iconName).then(setIcon);
   }, [iconName]);
 
-  if (!iconName) return <span>🤖</span>;
-  if (Icon) return <Icon className="h-4 w-4" />;
-  return <span style={{ fontSize: 12, color: "#666" }}>{iconName}</span>;
+  const Cmp = Icon ?? Bot;
+  return <Cmp className="h-4 w-4" />;
 }
 
 export function AgentSelector({ agents, selectedIds, onSelectionChange, companyId }: AgentSelectorProps) {
