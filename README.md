@@ -1,7 +1,7 @@
 # Batch Agent Config for PaperClip AI
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.0-green.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-0.1.1-green.svg)](package.json)
 [![PaperClip SDK](https://img.shields.io/badge/PaperClip%20SDK-compatible-purple.svg)](https://paperclip.ai)
 
 > **Batch-edit configuration for your PaperClip AI agents**
